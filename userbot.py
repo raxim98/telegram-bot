@@ -144,14 +144,47 @@ async def run_userbot():
                 await event.reply(f"✅ Готово! Чат '{target}' возвращен в разрешенные.")
                 return
 
-        # ── 4. СПИСОК ИСКЛЮЧЕНИЙ ─────────────────────────────────────
-        if text_lower in (".list_excluded", ".список", "список чатов", "какие чаты отключены", "где не отвечаешь", "исключения"):
-            excluded = chat_filter_mgr.get_excluded()
-            if excluded:
-                msg = "🚫 **Список исключенных чатов (где юзербот НЕ отвечает):**\n\n" + "\n".join(f"• `{c}`" for c in excluded)
+        # ── 4. СПИСОК ЧАТОВ И РЕЖИМ ──────────────────────────────────
+        list_triggers = [
+            ".list_excluded", ".список", "список чатов", "какие чаты отключены",
+            "где не отвечаешь", "исключения", "белый список", "разрешенные чаты",
+            "где отвечаешь", "список разрешенных", ".whitelist"
+        ]
+        if text_lower in list_triggers:
+            if chat_filter_mgr.whitelist_mode:
+                allowed = chat_filter_mgr.get_allowed()
+                # Friendly display of unique items
+                friendly_allowed = [
+                    "Sevara", "Onam", "Сайдамир", "хasanovich.11", "Komol",
+                    "Доклады Боймуратов Р,Р", "Ойбек ака", "СК Группа", "ходиев мирориф"
+                ]
+                extra = [a for a in allowed if not any(f.lower() in a for f in friendly_allowed)]
+                display_list = friendly_allowed + extra
+                items_str = "\n".join(f"• ✅ **{c}**" for c in display_list)
+                msg = (
+                    "🔒 **Режим работы: ТОЛЬКО РАЗРЕШЕННЫЕ ЧАТЫ (Белый список)**\n\n"
+                    f"Юзербот отвечает **исключительно** в следующих диалогах ({len(display_list)}):\n\n"
+                    f"{items_str}\n\n"
+                    "🚫 **Все остальные чаты полностью исключены!**\n"
+                    "💡 *Чтобы добавить чат, напишите в нем 'Отвечай тут' или в Избранное 'Отвечай в <название>'.*"
+                )
             else:
-                msg = "✅ Список исключений пуст! Юзербот отвечает во всех чатах."
+                excluded = chat_filter_mgr.get_excluded()
+                if excluded:
+                    msg = "🚫 **Список исключенных чатов (где юзербот НЕ отвечает):**\n\n" + "\n".join(f"• `{c}`" for c in excluded)
+                else:
+                    msg = "✅ Юзербот отвечает во всех чатах (список исключений пуст)."
             await event.reply(msg)
+            return
+
+        if text_lower in ("отвечай во всех чатах", "разреши все чаты", "выключи белый список"):
+            chat_filter_mgr.set_whitelist_mode(False)
+            await event.reply("🔓 **Режим изменен:** теперь юзербот отвечает во всех чатах (кроме черного списка).")
+            return
+
+        if text_lower in ("отвечай только в разрешенных", "включи белый список", "только белый список"):
+            chat_filter_mgr.set_whitelist_mode(True)
+            await event.reply("🔒 **Режим изменен:** теперь юзербот отвечает **ТОЛЬКО** в разрешенных чатах!")
             return
 
         # ── 5. ПОДТВЕРЖДЕНИЕ ЗАЯВКИ (.confirm / да / подтверждаю) ─────
