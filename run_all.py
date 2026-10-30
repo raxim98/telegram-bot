@@ -3,6 +3,7 @@
 Designed for cloud hosting (Render.com, Railway.app, VPS, Docker):
   • Starts bot.py (Telegram Bot @AgenttgH_bot + Healthcheck HTTP server on $PORT)
   • Starts userbot.py (AI Userbot acting from your personal account)
+  • Self-pinging background thread to prevent Render free-tier from sleeping after 15 minutes
   • Monitors both processes and auto-restarts if either crashes or drops connection
   • Graceful shutdown on termination signals
 """
@@ -13,13 +14,41 @@ import os
 import signal
 import subprocess
 import sys
+import threading
 import time
+import urllib.request
 
 # ── Force UTF-8 logging on Windows ────────────────────────
 try:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 except Exception:
     pass
+
+
+def _start_keep_alive_pinger():
+    """Background thread that pings the Render service every 8 minutes to prevent sleep."""
+    def pinger_loop():
+        # Wait 60 seconds after startup before starting pings
+        time.sleep(60)
+        url = os.getenv("RENDER_EXTERNAL_URL") or "https://telegram-bot-24-7-i3cs.onrender.com"
+        print(f"📡 [KEEP-ALIVE] Фоновый пингер запущен для: {url}")
+        
+        while True:
+            try:
+                req = urllib.request.Request(
+                    url,
+                    headers={"User-Agent": "Render-KeepAlive-Supervisor/1.0"}
+                )
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    print(f"💓 [KEEP-ALIVE] Ping {url} -> HTTP {resp.status} (таймер сна Render сброшен)")
+            except Exception as e:
+                print(f"⚠️ [KEEP-ALIVE] Ошибка пинга: {e}")
+                
+            # Ping every 8 minutes (480 seconds). Render sleeps after 15 minutes.
+            time.sleep(480)
+
+    t = threading.Thread(target=pinger_loop, daemon=True)
+    t.start()
 
 
 def main():
@@ -38,6 +67,9 @@ def main():
 
     print(f"• Запуск 2/2: AI-юзербот (личный аккаунт)...")
     p_userbot = subprocess.Popen(userbot_cmd)
+
+    # Start self-pinging keep-alive thread
+    _start_keep_alive_pinger()
 
     print("\n✅ Обе службы успешно запущены и работают параллельно!")
     print("=" * 65)

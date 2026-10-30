@@ -4,6 +4,7 @@ service_account.json
 *.session
 *.session-journal
 CLOUD_DEPLOY_ENV.txt
+auth_state.json
 *.zip
 
 # Python virtual environment & cache
