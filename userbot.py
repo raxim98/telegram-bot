@@ -156,7 +156,7 @@ async def run_userbot():
                 # Friendly display of unique items
                 friendly_allowed = [
                     "Sevara", "Onam", "Сайдамир", "хasanovich.11", "Komol",
-                    "Доклады Боймуратов Р,Р", "Ойбек ака", "СК Группа", "ходиев мирориф"
+                    "Доклады Боймуратов Р,Р", "ходиев мирориф"
                 ]
                 extra = [a for a in allowed if not any(f.lower() in a for f in friendly_allowed)]
                 display_list = friendly_allowed + extra

@@ -33,8 +33,6 @@ DEFAULT_ALLOWED_CHATS = [
     "хasanovich.11", "xasanovich.11", "xasanovich_11", "xasanovich",
     "komol", "комол",
     "доклады боймуратов р,р", "доклады боймуратов р.р", "доклады боймуратов", "боймуратов",
-    "ойбек ака", "oybek aka",
-    "ск группа", "ck группа",
     "ходиев мирориф", "ходиев", "мирориф",
 ]
 
@@ -193,8 +191,8 @@ class ChatFilterManager:
             if len(pat_words) > 1 and all(w in title_norm for w in pat_words):
                 return True
 
-            # Stem match for names >= 5 chars (e.g. sevara -> sevar in sevarka)
-            if len(norm_pat) >= 5 and norm_pat[:5] in title_norm:
+            # Stem match ONLY for single-word names >= 5 chars (e.g. sevara -> sevar in sevarka)
+            if len(pat_words) == 1 and len(norm_pat) >= 5 and norm_pat[:5] in title_norm:
                 return True
 
         return False
@@ -206,6 +204,11 @@ class ChatFilterManager:
         chat_title: str | None = None,
     ) -> bool:
         """Check if userbot is allowed to reply in this chat."""
+        # 0. Always check excluded list FIRST (blacklist has highest priority)
+        for pattern in self._excluded:
+            if self._matches_target(pattern, chat_id, chat_username, chat_title):
+                return False
+
         # 1. Strict Whitelist Mode
         if self.whitelist_mode:
             for pattern in self._allowed:
@@ -214,10 +217,6 @@ class ChatFilterManager:
             # In whitelist mode, if not in allowed list, ignore completely
             return False
 
-        # 2. Blacklist Mode (fall back to exclusions)
-        for pattern in self._excluded:
-            if self._matches_target(pattern, chat_id, chat_username, chat_title):
-                return False
         return True
 
     # ── Chat Inclusion / Exclusion Management ──────────────────
