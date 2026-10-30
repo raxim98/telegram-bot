@@ -1,0 +1,15 @@
+# Secrets & credentials
+.env
+service_account.json
+*.session
+*.session-journal
+CLOUD_DEPLOY_ENV.txt
+*.zip
+
+# Python virtual environment & cache
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+
