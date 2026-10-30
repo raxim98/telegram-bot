@@ -156,7 +156,7 @@ async def run_userbot():
                 # Friendly display of unique items
                 friendly_allowed = [
                     "Sevara", "Onam", "Сайдамир", "хasanovich.11", "Komol",
-                    "Доклады Боймуратов Р,Р", "ходиев мирориф"
+                    "Доклады Боймуратов Р,Р", "Ойбек ака СК Группа (только при ответе мне)", "ходиев мирориф"
                 ]
                 extra = [a for a in allowed if not any(f.lower() in a for f in friendly_allowed)]
                 display_list = friendly_allowed + extra
@@ -284,6 +284,36 @@ async def run_userbot():
         message_text = (event.text or "").strip()
         if not message_text:
             return
+
+        # ── Проверка для групп (Ойбек ака СК Группа и др.): отвечать ТОЛЬКО если пишут мне ──
+        is_group = event.is_group or getattr(chat, "megagroup", False)
+        if is_group:
+            is_reply_to_me = False
+            if event.is_reply:
+                try:
+                    reply_msg = await event.get_reply_message()
+                    if reply_msg:
+                        reply_sender_id = getattr(reply_msg, "sender_id", None)
+                        peer_id = getattr(getattr(reply_msg, "from_id", None), "user_id", None)
+                        if reply_sender_id == me.id or peer_id == me.id:
+                            is_reply_to_me = True
+                except Exception as re_err:
+                    logger.debug("Ошибка проверки reply в группе: %s", re_err)
+
+            is_mentioned = False
+            if getattr(event.message, "mentioned", False):
+                is_mentioned = True
+            elif me.username and f"@{me.username.lower()}" in message_text.lower():
+                is_mentioned = True
+            else:
+                # Проверка упоминания по имени (Рахим / Рахимжон / Боймуратов)
+                name_pattern = r"(?:\b|^)(рахим|рахимжон|raxim|raximjon|боймуратов)(?:\b|$)"
+                if re.search(name_pattern, message_text, re.IGNORECASE):
+                    is_mentioned = True
+
+            if not (is_reply_to_me or is_mentioned):
+                logger.info("Группа '%s': сообщение от %s не адресовано Рахиму (нет reply/mention). Пропускаю.", chat_title, sender_name)
+                return
 
         logger.info("Входящее сообщение в разрешенном чате '%s' от %s: %s", chat_title, sender_name, message_text[:80])
 
